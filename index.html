@@ -1,0 +1,99 @@
+
+<!doctype html>
+<html lang="pl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Edytor — Elkiokolice</title>
+  <style>
+    body {
+      max-width: 850px;
+      margin: 30px auto;
+      padding: 0 16px;
+      font: 16px Arial, sans-serif;
+      color: #222;
+    }
+    input, textarea, button {
+      box-sizing: border-box;
+      width: 100%;
+      margin: 8px 0 16px;
+      padding: 12px;
+      font: inherit;
+    }
+    textarea { min-height: 260px; }
+    button { cursor: pointer; }
+    #status { white-space: pre-wrap; }
+  </style>
+</head>
+<body>
+  <h1>Edytor Elkiokolice</h1>
+  <p>Wpisz dane artykułu. Adres powinien składać się z małych liter, cyfr i myślników.</p>
+
+  <label for="password">Hasło edytora</label>
+  <input id="password" type="password" autocomplete="current-password">
+
+  <label for="slug">Adres artykułu (slug)</label>
+  <input id="slug" placeholder="np. wydarzenia-w-gdansku">
+
+  <label for="title">Tytuł</label>
+  <input id="title" maxlength="200" placeholder="Tytuł artykułu">
+
+  <label for="content">Treść</label>
+  <textarea id="content" placeholder="Wpisz treść artykułu..."></textarea>
+
+  <button id="save">Zapisz szkic</button>
+  <button id="publish">Dodaj do kolejki publikacji</button>
+
+  <p id="status" role="status">Gotowy.</p>
+
+  <script>
+    // Zastąp ten adres swoim adresem Workera z końcówką workers.dev.
+    const API_URL = "https://elki-editor-api.rafaljurewicz09.workers.dev/";
+
+    const status = document.getElementById("status");
+
+    async function send(action) {
+      const password = document.getElementById("password").value;
+      const slug = document.getElementById("slug").value.trim();
+      const title = document.getElementById("title").value.trim();
+      const content = document.getElementById("content").value;
+
+      if (!password || !slug || !title) {
+        status.textContent = "Podaj hasło, adres artykułu i tytuł.";
+        return;
+      }
+
+      if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug) || slug.length > 80) {
+        status.textContent =
+          "Nieprawidłowy adres. Użyj małych liter, cyfr i myślników.";
+        return;
+      }
+
+      status.textContent = "Wysyłanie...";
+
+      try {
+        const response = await fetch(API_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ password, slug, title, content, action })
+        });
+
+        const result = await response.json();
+        status.textContent = response.ok
+          ? result.message
+          : "Błąd: " + (result.error || response.status);
+      } catch (error) {
+        status.textContent =
+          "Nie udało się połączyć. Sprawdź adres Workera i ustawienie ALLOWED_ORIGIN.";
+      }
+    }
+
+    document.getElementById("save").addEventListener("click", () => send("save"));
+    document.getElementById("publish").addEventListener("click", () => {
+      if (confirm("Dodać ten artykuł do kolejki publikacji?")) {
+        send("publish");
+      }
+    });
+  </script>
+</body>
+</html>
